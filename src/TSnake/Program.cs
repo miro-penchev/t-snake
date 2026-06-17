@@ -1,10 +1,11 @@
-// Throwaway harness for plan 02 (rendering). The real game loop and keyboard input are later
-// plans; here the snake stays FROZEN until you press a key, so we can watch the renderer paint
-// every cell change by hand. Pass "ascii" to use the monochrome theme.
+// Throwaway harness for plan 03 (input). Combined with the plan-02 renderer, this is the first
+// PLAYABLE build: a real InputService steers a live snake, with crude fixed Thread.Sleep pacing
+// standing in for the proper fixed-timestep loop (still a later plan). Pass "ascii" for the
+// monochrome theme.
 //
-//   Arrow keys : turn and step one tick     Space / Enter : step forward (no turn)
-//   p          : pause overlay (any key resumes)            Esc / Q : quit
+//   WASD / arrows : steer        Space : pause/resume        Esc : quit
 using TSnake.Core;
+using TSnake.Input;
 using TSnake.Rendering;
 
 bool ascii = args.Any(a => a.Equals("ascii", StringComparison.OrdinalIgnoreCase));
@@ -34,51 +35,58 @@ if (!TerminalSession.EnsureMinimumSize(BoardGeometry.TotalCols(config.Width), Bo
 }
 
 var engine = new GameEngine(config, new SeededRandom(config.Seed));
-string modeLabel = ascii ? "ASCII (demo)" : "Unicode (demo)";
+string modeLabel = ascii ? "ASCII (playable)" : "Unicode (playable)";
 
 using var ui = new ConsoleRenderer(theme, modeLabel, pointsPerFood);
+using var input = new InputService(new ConsoleKeySource());
+
 ui.Begin(engine.State);
 
-Direction heading = Direction.Right;
-bool quit = false;
-
-while (!quit && engine.Status == GameStatus.Running)
+bool paused = false;
+while (engine.Status == GameStatus.Running)
 {
-    ConsoleKey key = Console.ReadKey(intercept: true).Key;
+    input.Poll();
 
-    switch (key)
+    if (input.ConsumeQuit())
     {
-        case ConsoleKey.Escape:
-        case ConsoleKey.Q:
-            quit = true;
-            continue;
-
-        case ConsoleKey.UpArrow: heading = Direction.Up; break;
-        case ConsoleKey.DownArrow: heading = Direction.Down; break;
-        case ConsoleKey.LeftArrow: heading = Direction.Left; break;
-        case ConsoleKey.RightArrow: heading = Direction.Right; break;
-
-        case ConsoleKey.P:
-            ui.ShowPaused();
-            Console.ReadKey(intercept: true);
-            ui.Redraw(engine.State); // restore the cells the overlay covered
-            continue;
-
-        case ConsoleKey.Spacebar:
-        case ConsoleKey.Enter:
-            break; // step forward in the current heading
-
-        default:
-            continue; // ignore other keys; stay frozen
+        break;
     }
 
-    engine.SetDirection(heading);
+    if (input.ConsumePause())
+    {
+        paused = !paused;
+        if (paused)
+        {
+            ui.ShowPaused();
+        }
+        else
+        {
+            ui.Redraw(engine.State); // restore the cells the overlay covered
+        }
+    }
+
+    if (paused)
+    {
+        Thread.Sleep(120); // stop ticking, but keep polling so we can see resume / quit
+        continue;
+    }
+
+    if (input.TryNextTurn(out Direction dir))
+    {
+        engine.SetDirection(dir);
+    }
+
     ui.Apply(engine.Tick());
+    Thread.Sleep(120); // crude fixed pacing; speed-up is the loop's job (later)
 }
 
-// Hold the final frame (with the collision marker, if any) until a key is pressed, so the
+// Hold the final frame (with the collision marker, if any) until the player presses Esc, so the
 // game-over state is visible before the terminal is restored on dispose.
-if (!quit)
+if (engine.Status != GameStatus.Running)
 {
-    Console.ReadKey(intercept: true);
+    while (!input.ConsumeQuit())
+    {
+        input.Poll();
+        Thread.Sleep(50);
+    }
 }
