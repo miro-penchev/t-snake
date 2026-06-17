@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\TSnake.Core\TSnake.Core.csproj" />
+    <ProjectReference Include="..\..\src\TSnake\TSnake.csproj" />
   </ItemGroup>
 
 </Project>

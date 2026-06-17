@@ -30,6 +30,13 @@ Suggested categories: `prompting`, `tooling`, `design`, `bug`, `terminal/renderi
 - **Resolution:** (1) Collisions are reported on `TickResult` (`EndReason` + `CollisionCell`); `CellKind` stays pure content. (2) Computed `willVacateTail = !eating && pendingGrowth == 0` and excluded the tail from the self-hit check only then. Both got dedicated tests (`FollowingTheVacatingTailIsLegal` vs `SelfCollisionEndsGame`), with a length-5 loop to bite a non-tail segment and a length-4 loop to land on the vacating tail.
 - **Lesson / note:** Make randomness injectable (`IRandom`) from day one — a `FakeRandom` returning a scripted index sequence made food/obstacle placement exact and every rule headlessly testable. A 5×1 board kept free-cell ordering trivial for the obstacle-hit test.
 
+### 2026-06-17 — Rendering: the score that wasn't in the contract, and P/Invoke for VT mode
+- **Category:** terminal/rendering
+- **Context:** Plan 02 — building the renderer (`TerminalSession`, two themes, `BoardGeometry`, `FrameComposer`, `ConsoleRenderer`) and a throwaway harness.
+- **Obstacle:** Two snags. (1) `IRenderer.Apply(TickResult)` is the documented fast-path signature, but `TickResult` carries no score — so the renderer literally can't read the new score to repaint the HUD. (2) Enabling Windows virtual-terminal processing needs `GetStdHandle`/`Get`/`SetConsoleMode`; the modern `[LibraryImport]` source generator emits `unsafe` marshalling code, which fails to compile under our default settings.
+- **Resolution:** (1) Kept the interface verbatim and tracked the score locally in `ConsoleRenderer`: `Begin`/`Redraw` seed it from the snapshot, and a tick containing a `Food` cell change (a newly spawned food ⇒ the snake just ate) bumps it by an injected `pointsPerFood`. `FrameComposer` stays pure — it's just handed a number. (2) Added `<AllowUnsafeBlocks>true</AllowUnsafeBlocks>` to the `TSnake` csproj. Per-cell color reset in the composer prevents color bleed between cursor moves.
+- **Lesson / note:** A delta-based render contract should carry *enough* state to paint the HUD, or the consumer ends up re-deriving it (here, "did a `Food` change appear?"). Fine for a throwaway harness; worth revisiting if the score formula gains per-tick variation. Also: the pure compose/write split paid off immediately — every escape sequence (positions, glyphs, truecolor SGR, "no color in ASCII mode") is asserted in unit tests with zero `Console` involvement.
+
 ---
 
 ## Summary (for exam docs — fill in at the end)
