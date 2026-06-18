@@ -1,33 +1,23 @@
-// Harness for plan 04 (game loop). The crude Thread.Sleep pacing of the input harness is gone:
-// a real GameLoop now drives the session with Stopwatch timing, a SpeedProfile speed-up, and
-// proper pause that freezes the clock. Real Settings/menus are still a later plan, so the
-// difficulty numbers below are hand-picked. Pass "ascii" for the monochrome theme.
+// Composition for plan 05 (settings). The hand-picked difficulty numbers are gone: a real
+// Settings layer now loads the player's preferences (writing a default settings.json on first
+// run), translates the chosen difficulty/level into the engine + loop configs, and a fresh
+// random seed makes each run differ. The menu that lets the player change those preferences
+// interactively is a later plan; for now they come from the file.
 //
-//   WASD / arrows : steer        Space : pause/resume        Esc : quit
+//   WASD / arrows : steer        Space : pause/resume (Easy only)        Esc : quit
 using TSnake.Core;
 using TSnake.Input;
 using TSnake.Loop;
 using TSnake.Rendering;
+using TSnake.Settings;
 
-bool ascii = args.Any(a => a.Equals("ascii", StringComparison.OrdinalIgnoreCase));
-ITheme theme = ascii ? new AsciiMonochromeTheme() : new UnicodeColorTheme();
+GameSettings settings = GameSettings.LoadOrDefault();
+Preferences prefs = settings.Preferences;
 
-var config = new GameConfig(
-    Width: 24,
-    Height: 16,
-    BasePointsPerFood: 10,
-    GrowthPerFood: 1,
-    DifficultyMultiplier: 1,
-    LevelMultiplier: 1,
-    ObstaclesEnabled: true,
-    ObstacleSpawnRate: 6,
-    ObstacleLifetimeTicks: 40,
-    MaxObstacles: 6,
-    InitialSnakeLength: 4,
-    StartPosition: new Point(6, 8),
-    Seed: Environment.TickCount);
-
-int pointsPerFood = config.BasePointsPerFood * config.DifficultyMultiplier * config.LevelMultiplier;
+// Per-run seed (plan §2.4): each game differs. Inject a fixed value here for a reproducible run.
+int seed = Random.Shared.Next();
+SessionConfig session = settings.BuildSession(prefs.Difficulty, prefs.Level, seed);
+GameConfig config = session.Engine;
 
 // Make sure the whole scene fits before we take over the screen.
 if (!TerminalSession.EnsureMinimumSize(BoardGeometry.TotalCols(config.Width), BoardGeometry.TotalRows(config.Height)))
@@ -35,21 +25,16 @@ if (!TerminalSession.EnsureMinimumSize(BoardGeometry.TotalCols(config.Width), Bo
     return;
 }
 
-var engine = new GameEngine(config, new SeededRandom(config.Seed));
-string modeLabel = ascii ? "ASCII (playable)" : "Unicode (playable)";
+ITheme theme = ThemeFor(prefs.RenderMode);
+string modeLabel = $"{prefs.Difficulty} · L{prefs.Level} · {prefs.RenderMode}";
+int pointsPerFood = config.BasePointsPerFood * config.DifficultyMultiplier * config.LevelMultiplier;
 
-// Entry-level pace: a comfortable 150 ms start that shrinks gently with each food, floored so it
-// stays playable. These are placeholder numbers — real per-difficulty/level values (and the
-// "mode" the player picks) arrive with the Settings/menus plan.
-var speed = new SpeedProfile(BaseIntervalMs: 150, MinIntervalMs: 60, ShrinkRate: 0.02, SpeedDriver.FoodEaten);
-
-// Pause is Easy-only by design; the harness enables it so the loop's pause path is exercisable.
-const bool pauseAllowed = true;
+var engine = new GameEngine(config, new SeededRandom(seed));
 
 using var ui = new ConsoleRenderer(theme, modeLabel, pointsPerFood);
 using var input = new InputService(new ConsoleKeySource());
 
-var loop = new GameLoop(engine, ui, input, speed, pauseAllowed);
+var loop = new GameLoop(engine, ui, input, session.Speed, session.PauseAllowed);
 GameOutcome outcome = loop.Run();
 
 // On death / board-full, hold the final frame (with the collision marker, if any) until the player
@@ -63,3 +48,11 @@ if (!outcome.Quit)
         Thread.Sleep(50);
     }
 }
+
+// Settings holds a render-mode *preference*; composition is where it becomes a concrete theme
+// (plan decision #7 — Settings never references Rendering).
+static ITheme ThemeFor(RenderMode mode) => mode switch
+{
+    RenderMode.AsciiMonochrome => new AsciiMonochromeTheme(),
+    _ => new UnicodeColorTheme(),
+};
