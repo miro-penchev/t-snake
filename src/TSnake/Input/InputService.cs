@@ -12,13 +12,29 @@ namespace TSnake.Input;
 public sealed class InputService : IDisposable
 {
     private readonly KeyboardReader _reader;
+    private readonly bool _ownsReader;
     private readonly TurnBuffer _buffer = new();
 
     private bool _pauseRequested;
     private bool _quitRequested;
 
-    /// <summary>Starts the background reader.</summary>
-    public InputService(IKeySource source) => _reader = new KeyboardReader(source);
+    /// <summary>Starts and owns a background reader over <paramref name="source"/>.</summary>
+    public InputService(IKeySource source)
+    {
+        _reader = new KeyboardReader(source);
+        _ownsReader = true;
+    }
+
+    /// <summary>
+    /// Consumes the <i>shared</i>, app-lifetime <see cref="KeyboardReader"/> (plan 07 §2.3): the menu
+    /// and the game read the same channel through different adapters, one at a time. The reader is
+    /// owned by the composition root, so this service must not dispose it.
+    /// </summary>
+    public InputService(KeyboardReader reader)
+    {
+        _reader = reader;
+        _ownsReader = false;
+    }
 
     /// <summary>Called once per tick: drain the channel, map keys, fill the buffer and the flags.</summary>
     public void Poll()
@@ -56,5 +72,11 @@ public sealed class InputService : IDisposable
     /// <summary>True once quit has been requested. Latches — quit is a one-way trip.</summary>
     public bool ConsumeQuit() => _quitRequested;
 
-    public void Dispose() => _reader.Dispose();
+    public void Dispose()
+    {
+        if (_ownsReader)
+        {
+            _reader.Dispose();
+        }
+    }
 }

@@ -41,6 +41,18 @@ public sealed class KeyboardReader : IDisposable
     /// <summary>The consumer side, drained by <see cref="InputService.Poll"/> once per tick.</summary>
     public ChannelReader<ConsoleKeyInfo> Reader => _channel.Reader;
 
+    /// <summary>
+    /// Discards every keystroke currently queued. Screens call this on each phase transition so a
+    /// stray key (e.g. the Enter that launched the game) can't leak into the next consumer (plan
+    /// 07 §2.3). Safe to call on the single consumer thread between phases.
+    /// </summary>
+    public void Flush()
+    {
+        while (_channel.Reader.TryRead(out _))
+        {
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed)

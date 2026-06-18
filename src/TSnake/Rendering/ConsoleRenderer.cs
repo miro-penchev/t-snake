@@ -3,11 +3,16 @@ using TSnake.Core;
 namespace TSnake.Rendering;
 
 /// <summary>
-/// The concrete renderer: owns the <see cref="TerminalSession"/>, builds a centered
-/// <see cref="BoardGeometry"/> for the current board, composes frames with
-/// <see cref="FrameComposer"/>, and issues one batched write per frame.
+/// The concrete renderer: draws into the shared <see cref="TerminalSession"/> owned by the
+/// composition root, builds a centered <see cref="BoardGeometry"/> for the current board, composes
+/// frames with <see cref="FrameComposer"/>, and issues one batched write per frame.
 /// </summary>
 /// <remarks>
+/// <para>
+/// The <see cref="TerminalSession"/> is injected and <i>not</i> owned: a single session wraps the
+/// whole application (menu, game, results) so the terminal is restored exactly once on exit
+/// (plan 07 §2.4). A fresh renderer is built per game session, but the session outlives it.
+/// </para>
 /// <para>
 /// <see cref="TickResult"/> carries no score, so <see cref="Apply"/> can't read it directly.
 /// We instead track the score locally: <see cref="Begin"/>/<see cref="Redraw"/> seed it from the
@@ -16,9 +21,8 @@ namespace TSnake.Rendering;
 /// <see cref="IRenderer"/> exactly as the plan specifies while still showing a live score.
 /// </para>
 /// </remarks>
-public sealed class ConsoleRenderer(ITheme theme, string modeLabel, int pointsPerFood) : IRenderer, IDisposable
+public sealed class ConsoleRenderer(ITheme theme, TerminalSession session, string modeLabel, int pointsPerFood) : IRenderer
 {
-    private readonly TerminalSession _session = new();
     private readonly System.IO.TextWriter _out = Console.Out;
 
     private FrameComposer? _composer;
@@ -71,11 +75,9 @@ public sealed class ConsoleRenderer(ITheme theme, string modeLabel, int pointsPe
         }
     }
 
-    public void Dispose() => _session.Dispose();
-
     private void BuildGeometry(GameState state)
     {
-        var geometry = BoardGeometry.Centered(state.Width, state.Height, ConsoleCols(), ConsoleRows());
+        var geometry = BoardGeometry.Centered(state.Width, state.Height, session.Width, session.Height);
         _composer = new FrameComposer(geometry, theme);
     }
 
@@ -83,17 +85,5 @@ public sealed class ConsoleRenderer(ITheme theme, string modeLabel, int pointsPe
     {
         _out.Write(frame);
         _out.Flush();
-    }
-
-    private static int ConsoleCols()
-    {
-        try { return Console.WindowWidth; }
-        catch (IOException) { return 120; }
-    }
-
-    private static int ConsoleRows()
-    {
-        try { return Console.WindowHeight; }
-        catch (IOException) { return 40; }
     }
 }

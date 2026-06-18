@@ -25,10 +25,17 @@ public sealed class GameSettings
         Preferences = preferences;
         _difficulties = difficulties;
         _levels = levels;
+        AvailableLevels = levels.Keys.OrderBy(k => k).ToArray();
     }
 
-    /// <summary>The persisted preferences; mutated in place by a future menu, then <see cref="Save"/>d.</summary>
-    public Preferences Preferences { get; private set; }
+    /// <summary>
+    /// The persisted preferences. The menu (plan 07) replaces this whole record as the player cycles
+    /// values, then calls <see cref="Save"/> on the way into a game.
+    /// </summary>
+    public Preferences Preferences { get; set; }
+
+    /// <summary>The level numbers the player may pick, ascending — the keys of the tuning table.</summary>
+    public IReadOnlyList<int> AvailableLevels { get; }
 
     /// <summary>A fresh <see cref="GameSettings"/> on the baked-in defaults, touching no file.</summary>
     public static GameSettings CreateDefault() =>

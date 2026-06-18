@@ -11,6 +11,9 @@ public static class Ansi
     public const string Esc = "\x1b[";
 
     public const string Reset = $"{Esc}0m";
+
+    /// <summary>Reverse video (swap fg/bg) — a theme-independent highlight for the selected menu row.</summary>
+    public const string Invert = $"{Esc}7m";
     public const string HideCursor = $"{Esc}?25l";
     public const string ShowCursor = $"{Esc}?25h";
     public const string EnterAltScreen = $"{Esc}?1049h";

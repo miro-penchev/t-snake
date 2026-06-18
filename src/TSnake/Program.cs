@@ -1,73 +1,19 @@
-// Composition for plan 05 (settings). The hand-picked difficulty numbers are gone: a real
-// Settings layer now loads the player's preferences (writing a default settings.json on first
-// run), translates the chosen difficulty/level into the engine + loop configs, and a fresh
-// random seed makes each run differ. The menu that lets the player change those preferences
-// interactively is a later plan; for now they come from the file.
+// Composition root for plan 07 (screens & composition). Main is deliberately thin: it constructs the
+// shared, long-lived services and wraps the entire run in a single TerminalSession so the terminal is
+// restored on *every* exit — normal, quit, or exception. Everything else — the menu, the game
+// sessions, the results, the high-score view — is sequenced by the AppController state machine.
 //
-//   WASD / arrows : steer        Space : pause/resume (Easy only)        Esc : quit
-using TSnake.Core;
+//   Menu : ↑↓ move · ←→ change a value · Enter select        In game : WASD/arrows · Space pause · Esc quit
 using TSnake.Input;
-using TSnake.Loop;
 using TSnake.Persistence;
 using TSnake.Rendering;
+using TSnake.Screens;
 using TSnake.Settings;
 
+using var term = new TerminalSession();           // restores the terminal on any exit path
+using var reader = new KeyboardReader(new ConsoleKeySource());
+
 GameSettings settings = GameSettings.LoadOrDefault();
-Preferences prefs = settings.Preferences;
-
-// Per-run seed (plan §2.4): each game differs. Inject a fixed value here for a reproducible run.
-int seed = Random.Shared.Next();
-SessionConfig session = settings.BuildSession(prefs.Difficulty, prefs.Level, seed);
-GameConfig config = session.Engine;
-
-// Make sure the whole scene fits before we take over the screen.
-if (!TerminalSession.EnsureMinimumSize(BoardGeometry.TotalCols(config.Width), BoardGeometry.TotalRows(config.Height)))
-{
-    return;
-}
-
-ITheme theme = ThemeFor(prefs.RenderMode);
-string modeLabel = $"{prefs.Difficulty} · L{prefs.Level} · {prefs.RenderMode}";
-int pointsPerFood = config.BasePointsPerFood * config.DifficultyMultiplier * config.LevelMultiplier;
-
-var engine = new GameEngine(config, new SeededRandom(seed));
-
-using var ui = new ConsoleRenderer(theme, modeLabel, pointsPerFood);
-using var input = new InputService(new ConsoleKeySource());
-
-var loop = new GameLoop(engine, ui, input, session.Speed, session.PauseAllowed);
-GameOutcome outcome = loop.Run();
-
-// On death / board-full, hold the final frame (with the collision marker, if any) until the player
-// presses Esc, so the end state is visible before the terminal is restored on dispose. A quit
-// already pressed Esc, so there is nothing to wait for.
-if (!outcome.Quit)
-{
-    while (!input.ConsumeQuit())
-    {
-        input.Poll();
-        Thread.Sleep(50);
-    }
-}
-
-// Persist a qualifying score (plan 06). Composition assembles the entry — the score from the
-// outcome, the name/difficulty/level from preferences, and the timestamp now — and persistence
-// stores it. The name-entry prompt and the table display are the Screens plan; until then the
-// saved player name stands in for a prompt.
 HighScoreTable scores = HighScoreTable.LoadOrEmpty();
-if (scores.Qualifies(outcome.Score))
-{
-    var entry = new HighScoreEntry(
-        HighScoreEntry.Sanitize(prefs.PlayerName), outcome.Score,
-        prefs.Difficulty, prefs.Level, DateTimeOffset.Now);
-    scores.Add(entry);
-    scores.Save();
-}
 
-// Settings holds a render-mode *preference*; composition is where it becomes a concrete theme
-// (plan decision #7 — Settings never references Rendering).
-static ITheme ThemeFor(RenderMode mode) => mode switch
-{
-    RenderMode.AsciiMonochrome => new AsciiMonochromeTheme(),
-    _ => new UnicodeColorTheme(),
-};
+new AppController(term, reader, settings, scores).Run();

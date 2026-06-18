@@ -37,6 +37,26 @@ public sealed partial class TerminalSession : IDisposable
         Console.CancelKeyPress += _cancelHandler;
     }
 
+    /// <summary>Current terminal width in columns; falls back to a sane default when not a real console.</summary>
+    public int Width
+    {
+        get
+        {
+            try { return Console.WindowWidth; }
+            catch (IOException) { return 120; }
+        }
+    }
+
+    /// <summary>Current terminal height in rows; falls back to a sane default when not a real console.</summary>
+    public int Height
+    {
+        get
+        {
+            try { return Console.WindowHeight; }
+            catch (IOException) { return 40; }
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed)
