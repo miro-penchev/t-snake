@@ -8,6 +8,7 @@
 using TSnake.Core;
 using TSnake.Input;
 using TSnake.Loop;
+using TSnake.Persistence;
 using TSnake.Rendering;
 using TSnake.Settings;
 
@@ -47,6 +48,20 @@ if (!outcome.Quit)
         input.Poll();
         Thread.Sleep(50);
     }
+}
+
+// Persist a qualifying score (plan 06). Composition assembles the entry — the score from the
+// outcome, the name/difficulty/level from preferences, and the timestamp now — and persistence
+// stores it. The name-entry prompt and the table display are the Screens plan; until then the
+// saved player name stands in for a prompt.
+HighScoreTable scores = HighScoreTable.LoadOrEmpty();
+if (scores.Qualifies(outcome.Score))
+{
+    var entry = new HighScoreEntry(
+        HighScoreEntry.Sanitize(prefs.PlayerName), outcome.Score,
+        prefs.Difficulty, prefs.Level, DateTimeOffset.Now);
+    scores.Add(entry);
+    scores.Save();
 }
 
 // Settings holds a render-mode *preference*; composition is where it becomes a concrete theme
