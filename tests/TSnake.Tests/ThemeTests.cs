@@ -59,7 +59,7 @@ public class ThemeTests
     [Fact]
     public void CollisionGlyphOverridesTheCellKindInBothThemes()
     {
-        Assert.Equal("✖✖", new UnicodeColorTheme().Cell(CellKind.SnakeBody, isCollision: true).Glyph);
+        Assert.Equal("✖ ", new UnicodeColorTheme().Cell(CellKind.SnakeBody, isCollision: true).Glyph);
         Assert.Equal("X ", new AsciiMonochromeTheme().Cell(CellKind.SnakeBody, isCollision: true).Glyph);
     }
 }

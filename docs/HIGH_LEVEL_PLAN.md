@@ -92,7 +92,7 @@ loop:
     precise short wait (do not busy-spin the CPU)
 ```
 
-- **Speed-up** = shrinking `current_tick_interval` over time, driven by the active difficulty's curve.
+- **Speed-up** = shrinking `current_tick_interval` as food is eaten (classic Snake ramp), driven by the active difficulty's curve. Easy holds a constant speed.
 - Timing uses `Stopwatch` for resolution; avoid relying on `Thread.Sleep` precision for the tick itself.
 
 ---

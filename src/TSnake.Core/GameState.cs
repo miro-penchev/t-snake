@@ -14,7 +14,8 @@ public sealed class GameState
         IReadOnlyCollection<Point> obstacles,
         int score,
         GameStatus status,
-        int tickCount)
+        int tickCount,
+        int foodEaten)
     {
         Width = width;
         Height = height;
@@ -24,6 +25,7 @@ public sealed class GameState
         Score = score;
         Status = status;
         TickCount = tickCount;
+        FoodEaten = foodEaten;
     }
 
     public int Width { get; }
@@ -37,4 +39,7 @@ public sealed class GameState
     public int Score { get; }
     public GameStatus Status { get; }
     public int TickCount { get; }
+
+    /// <summary>How many foods have been eaten this run — the speed-up driver (the classic ramp).</summary>
+    public int FoodEaten { get; }
 }

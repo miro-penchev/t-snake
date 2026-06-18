@@ -24,6 +24,7 @@ public sealed class GameEngine
     private Direction _pending;
     private int _score;
     private int _tickCount;
+    private int _foodEaten;
 
     // Segments still owed to the snake from foods with GrowthPerFood > 1.
     private int _pendingGrowth;
@@ -56,7 +57,8 @@ public sealed class GameEngine
         [.. _obstacles],
         _score,
         Status,
-        _tickCount);
+        _tickCount,
+        _foodEaten);
 
     /// <summary>Overwrite the single pending-direction slot. The reversal guard is applied in <see cref="Tick"/>.</summary>
     public void SetDirection(Direction next) => _pending = next;
@@ -116,6 +118,7 @@ public sealed class GameEngine
 
         if (eating)
         {
+            _foodEaten++;
             _score += _config.BasePointsPerFood * _config.DifficultyMultiplier * _config.LevelMultiplier;
             _pendingGrowth += _config.GrowthPerFood - 1; // the kept tail this tick covers the first segment
 

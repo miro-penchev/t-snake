@@ -27,7 +27,8 @@ public sealed class UnicodeColorTheme : ITheme
     {
         if (isCollision)
         {
-            return new GlyphCell("✖✖", Collision, BoardBg);
+            // A single mark padded to the two-column cell — "✖✖" reads as two separate X's.
+            return new GlyphCell("✖ ", Collision, BoardBg);
         }
 
         return kind switch
