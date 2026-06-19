@@ -83,6 +83,13 @@ public sealed class GameLoop
 
                     if (_engine.Status != GameStatus.Running)
                     {
+                        // A fatal collision erupts from the cell the snake died on; a board-full win
+                        // has no collision cell, so it ends quietly.
+                        if (result.CollisionCell is { } origin)
+                        {
+                            _renderer.PlayDeathEffect(origin);
+                        }
+
                         return Outcome(sw.Elapsed, result.EndReason, quit: false);
                     }
 

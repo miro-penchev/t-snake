@@ -17,6 +17,17 @@ public sealed class UnicodeColorTheme : ITheme
     private static readonly Rgb ObstacleGray = new(130, 130, 130);
     private static readonly Rgb Collision = new(255, 60, 60);
 
+    // The blast palette: white-hot wavefront cooling through fire to burnt ember. Index = heat tier.
+    private static readonly GlyphCell[] Blast =
+    [
+        new("██", new Rgb(255, 248, 220), new Rgb(255, 230, 120)), // 0: white-hot core ring
+        new("▓▓", new Rgb(255, 240, 160), new Rgb(255, 150, 30)),  // 1: yellow flame
+        new("▓▓", new Rgb(255, 170, 40), new Rgb(210, 70, 20)),    // 2: orange fire
+        new("▒▒", new Rgb(220, 70, 30), new Rgb(110, 30, 15)),     // 3: deep red
+        new("░░", new Rgb(120, 50, 35), BoardBg),                  // 4: cooling ember
+        new("░░", new Rgb(70, 35, 30), BoardBg),                   // 5: burnt-out cinder
+    ];
+
     public int CellWidth => 2;
 
     public Rgb? HudColor => new Rgb(200, 200, 210);
@@ -41,4 +52,6 @@ public sealed class UnicodeColorTheme : ITheme
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
         };
     }
+
+    public GlyphCell Explosion(int tier) => Blast[Math.Clamp(tier, 0, Blast.Length - 1)];
 }

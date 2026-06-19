@@ -8,6 +8,9 @@ namespace TSnake.Rendering;
 /// </summary>
 public sealed class AsciiMonochromeTheme : ITheme
 {
+    // The retro blast ramp: dense at the wavefront, thinning to scattered debris. No color.
+    private static readonly string[] Blast = ["##", "**", "++", "::", "..", "  "];
+
     public int CellWidth => 2;
 
     public Rgb? HudColor => null;
@@ -31,4 +34,6 @@ public sealed class AsciiMonochromeTheme : ITheme
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
         };
     }
+
+    public GlyphCell Explosion(int tier) => new(Blast[Math.Clamp(tier, 0, Blast.Length - 1)]);
 }

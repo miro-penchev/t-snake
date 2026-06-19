@@ -16,4 +16,11 @@ public interface IRenderer
 
     /// <summary>Draw a centered pause overlay (resuming calls <see cref="Redraw"/> to restore it).</summary>
     void ShowPaused();
+
+    /// <summary>
+    /// Play the game-over blast: a shockwave that erupts from <paramref name="origin"/> (the cell the
+    /// snake died on, in board coordinates) and expands to consume the whole board. Blocks for the
+    /// short duration of the animation; the caller draws the next screen afterward.
+    /// </summary>
+    void PlayDeathEffect(Point origin);
 }

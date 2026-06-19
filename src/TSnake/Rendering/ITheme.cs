@@ -33,6 +33,13 @@ public interface ITheme
     /// <summary>Glyph + colors for a cell, given whether it is this tick's fatal collision cell.</summary>
     GlyphCell Cell(CellKind kind, bool isCollision);
 
+    /// <summary>
+    /// A cell of the game-over blast (plan 02's "death effect"), by heat tier: <c>0</c> is the
+    /// hottest leading wavefront, higher tiers cool toward burnt embers. Implementations clamp an
+    /// out-of-range tier to their coldest, so the composer can pass a raw distance band.
+    /// </summary>
+    GlyphCell Explosion(int tier);
+
     /// <summary>The frame border pieces.</summary>
     FrameStyle Frame { get; }
 

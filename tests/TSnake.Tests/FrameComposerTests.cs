@@ -90,6 +90,26 @@ public class FrameComposerTests
     }
 
     [Fact]
+    public void ExplosionRadiusZeroPaintsOnlyTheOriginAtTheHottestTier()
+    {
+        string s = Ascii().ComposeExplosionFrame(new Point(2, 3), radius: 0);
+
+        Assert.Contains("\x1b[5;6H", s);    // origin (2,3) -> row 5, col 6
+        Assert.Contains("##", s);           // hottest ASCII blast tier
+        Assert.DoesNotContain("\x1b[2;2H", s); // a far cell (0,0) is untouched at radius 0
+    }
+
+    [Fact]
+    public void ExplosionWavefrontIsHotterThanTheCoolingCenter()
+    {
+        // At radius 1 the origin sits one ring behind the edge, so it cools while the new ring leads.
+        string s = Ascii().ComposeExplosionFrame(new Point(2, 3), radius: 1);
+
+        Assert.Contains("\x1b[5;8H", s); // wavefront neighbor (3,3) -> row 5, col 8
+        Assert.Contains("**", s);        // origin has cooled to tier 1
+    }
+
+    [Fact]
     public void FullFramePaintsBorderSnakeFoodAndHud()
     {
         // A real snapshot from the engine: 5x3 board, single-cell snake at (2,1).

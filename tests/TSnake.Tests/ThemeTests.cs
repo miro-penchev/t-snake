@@ -62,4 +62,22 @@ public class ThemeTests
         Assert.Equal("✖ ", new UnicodeColorTheme().Cell(CellKind.SnakeBody, isCollision: true).Glyph);
         Assert.Equal("X ", new AsciiMonochromeTheme().Cell(CellKind.SnakeBody, isCollision: true).Glyph);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    [InlineData(99)] // far past the ramp — must clamp, not throw
+    public void ExplosionGivesEveryTierATwoColumnGlyphInBothThemes(int tier)
+    {
+        Assert.Equal(2, new UnicodeColorTheme().Explosion(tier).Glyph.Length);
+        Assert.Equal(2, new AsciiMonochromeTheme().Explosion(tier).Glyph.Length);
+    }
+
+    [Fact]
+    public void ExplosionTierClampsToTheColdestInsteadOfThrowing()
+    {
+        // Out-of-range high tiers settle on the coldest entry rather than indexing past the ramp.
+        Assert.Equal(new UnicodeColorTheme().Explosion(5).Glyph, new UnicodeColorTheme().Explosion(1000).Glyph);
+        Assert.Equal(new AsciiMonochromeTheme().Explosion(5).Glyph, new AsciiMonochromeTheme().Explosion(1000).Glyph);
+    }
 }

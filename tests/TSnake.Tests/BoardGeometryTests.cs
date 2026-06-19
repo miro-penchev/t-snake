@@ -61,6 +61,17 @@ public class BoardGeometryTests
     }
 
     [Fact]
+    public void MaxRadiusFromReachesTheFarthestCorner()
+    {
+        var g = new BoardGeometry(10, 8, OriginRow: 1, OriginCol: 1);
+
+        // From the (0,0) corner the farthest cell is (9,7): sqrt(81+49) = 11.40 -> 12 rings.
+        Assert.Equal(12, g.MaxRadiusFrom(new Point(0, 0)));
+        // From the middle the farthest corner is closer: max(5,4)=5, max(4,3)=4 -> sqrt(41)=6.4 -> 7.
+        Assert.Equal(7, g.MaxRadiusFrom(new Point(5, 4)));
+    }
+
+    [Fact]
     public void CenteredClampsOriginToOneOnATinyTerminal()
     {
         var g = BoardGeometry.Centered(boardWidth: 40, boardHeight: 30, terminalCols: 10, terminalRows: 5);

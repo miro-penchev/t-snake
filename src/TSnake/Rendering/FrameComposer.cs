@@ -82,6 +82,39 @@ public sealed class FrameComposer(BoardGeometry geometry, ITheme theme)
     }
 
     /// <summary>
+    /// One frame of the game-over blast: an expanding disk of <paramref name="radius"/> rings
+    /// centered on <paramref name="origin"/>. Each covered cell is painted with a heat tier set by
+    /// how far <i>behind</i> the leading edge it sits — the wavefront (distance ≈ radius) is the
+    /// hottest tier 0, cooling toward burnt embers at the center — so a sweep of increasing radii
+    /// reads as a shockwave consuming the board. Cells beyond the radius are left untouched, so the
+    /// board underneath shows through until the wave reaches it. Pure, like the rest of the composer.
+    /// </summary>
+    public string ComposeExplosionFrame(Point origin, int radius)
+    {
+        var sb = new StringBuilder();
+
+        for (int y = 0; y < _geo.BoardHeight; y++)
+        {
+            for (int x = 0; x < _geo.BoardWidth; x++)
+            {
+                int dx = x - origin.X;
+                int dy = y - origin.Y;
+                double distance = Math.Sqrt((double)dx * dx + (double)dy * dy);
+                if (distance > radius)
+                {
+                    continue; // the wave hasn't reached this cell yet
+                }
+
+                int tier = (int)(radius - distance);
+                AppendGlyph(sb, new Point(x, y), _theme.Explosion(tier));
+            }
+        }
+
+        sb.Append(Ansi.Reset);
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// A small centered "PAUSED" box drawn over the board. Resuming repaints the covered cells
     /// via <c>Redraw</c>, so nothing under the box needs to be remembered (plan §6).
     /// </summary>
@@ -114,10 +147,12 @@ public sealed class FrameComposer(BoardGeometry geometry, ITheme theme)
         return sb.ToString();
     }
 
-    private void AppendCell(StringBuilder sb, Point cell, CellKind kind, bool isCollision)
+    private void AppendCell(StringBuilder sb, Point cell, CellKind kind, bool isCollision) =>
+        AppendGlyph(sb, cell, _theme.Cell(kind, isCollision));
+
+    private void AppendGlyph(StringBuilder sb, Point cell, GlyphCell g)
     {
         (int row, int col) = _geo.CellToConsole(cell);
-        GlyphCell g = _theme.Cell(kind, isCollision);
 
         sb.Append(Ansi.MoveTo(row, col));
         if (g.Background is { } bg)

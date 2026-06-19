@@ -30,6 +30,19 @@ public readonly record struct BoardGeometry(int BoardWidth, int BoardHeight, int
         (OriginRow + 1 + cell.Y, OriginCol + 1 + cell.X * CellWidth);
 
     /// <summary>
+    /// The Euclidean distance (in board cells) from <paramref name="origin"/> to the farthest
+    /// corner — i.e. how many expanding rings the game-over blast needs to cover the whole board.
+    /// Distance is measured in board-cell units (cells are ~square at two columns each), so the
+    /// blast reads as a circle rather than an ellipse.
+    /// </summary>
+    public int MaxRadiusFrom(Point origin)
+    {
+        int dx = Math.Max(origin.X, BoardWidth - 1 - origin.X);
+        int dy = Math.Max(origin.Y, BoardHeight - 1 - origin.Y);
+        return (int)Math.Ceiling(Math.Sqrt((double)dx * dx + (double)dy * dy));
+    }
+
+    /// <summary>
     /// Total rows the whole scene occupies: frame plus the HUD line. Used by the startup
     /// minimum-size check and to center the scene.
     /// </summary>

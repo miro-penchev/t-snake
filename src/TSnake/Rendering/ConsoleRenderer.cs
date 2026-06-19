@@ -1,3 +1,4 @@
+using System.Threading;
 using TSnake.Core;
 
 namespace TSnake.Rendering;
@@ -23,9 +24,16 @@ namespace TSnake.Rendering;
 /// </remarks>
 public sealed class ConsoleRenderer(ITheme theme, TerminalSession session, string modeLabel, int pointsPerFood) : IRenderer
 {
+    // Death-blast pacing: one expanding ring every FrameMs, plus a few cooling frames past the edge
+    // so even the far corners burn down to embers, then a brief hold on the scorched board.
+    private const int BlastFrameMs = 38;
+    private const int BlastCooldownRings = 4;
+    private const int BlastHoldMs = 400;
+
     private readonly System.IO.TextWriter _out = Console.Out;
 
     private FrameComposer? _composer;
+    private BoardGeometry _geometry;
     private int _score;
 
     public void Begin(GameState initial)
@@ -75,10 +83,27 @@ public sealed class ConsoleRenderer(ITheme theme, TerminalSession session, strin
         }
     }
 
+    public void PlayDeathEffect(Point origin)
+    {
+        if (_composer is null)
+        {
+            return; // Begin/Redraw must run first to build the geometry.
+        }
+
+        int lastRing = _geometry.MaxRadiusFrom(origin) + BlastCooldownRings;
+        for (int radius = 0; radius <= lastRing; radius++)
+        {
+            Write(_composer.ComposeExplosionFrame(origin, radius));
+            Thread.Sleep(BlastFrameMs);
+        }
+
+        Thread.Sleep(BlastHoldMs); // let the scorched board linger a beat before the results screen
+    }
+
     private void BuildGeometry(GameState state)
     {
-        var geometry = BoardGeometry.Centered(state.Width, state.Height, session.Width, session.Height);
-        _composer = new FrameComposer(geometry, theme);
+        _geometry = BoardGeometry.Centered(state.Width, state.Height, session.Width, session.Height);
+        _composer = new FrameComposer(_geometry, theme);
     }
 
     private void Write(string frame)
